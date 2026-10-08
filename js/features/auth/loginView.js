@@ -1,4 +1,4 @@
-import { authenticateUser } from "./authService.js";
+import { authenticateUser, getRolToken } from "./authService.js";
 
 const loginForm = document.getElementById("login-form");
 const emailInput = document.getElementById("email");
@@ -16,9 +16,16 @@ loginForm.addEventListener("submit", async (event) => {
     email: emailInput.value.trim(),
     password: passwordInput.value.trim(),
   };
+
   const success = await authenticateUser(credentials);
+
   if (success) {
-    window.location.href = "dashboard.html";
+    const rol = getRolToken();
+    if (rol === "ADMIN") {
+      window.location.href = "pages/admin/dashboard.html";
+    } else {
+      window.location.href = "pages/cliente/cartelera.html";
+    }
   } else {
     errorMessage.classList.remove("d-none");
     btnLogin.innerText = originalText;

@@ -16,30 +16,42 @@ registerForm.addEventListener("submit", async (event) => {
   const originalText = btnRegister.innerText;
   btnRegister.innerText = "Cargando...";
   btnRegister.disabled = true;
+
   const userData = {
     nombres: nombresInput.value.trim(),
     apellidos: apellidosInput.value.trim(),
     email: emailInput.value.trim(),
     password: passwordInput.value.trim(),
   };
+
   const result = await registerUsuario(userData);
   alertMessage.classList.remove("d-none");
+
   if (result.success) {
     alertMessage.classList.add("alert-success");
     alertMessage.innerText =
       "Se ha registrado correctamente. Iniciando sesión...";
+
     const credentials = {
       email: userData.email,
       password: userData.password,
     };
     const loginSuccess = await authenticateUser(credentials);
+
     if (loginSuccess) {
+      const rol = getRolToken();
+
       setTimeout(() => {
-        window.location.href = "dashboard.html";
+        if (rol === "ADMIN") {
+          window.location.href = "../admin/dashboard.html";
+        } else {
+          window.location.href = "../cliente/cartelera.html";
+        }
       }, 1500);
     } else {
       alertMessage.innerText =
         "Se ha registrado correctamente. Por favor, inicie sesión manualmente.";
+
       setTimeout(() => {
         window.location.href = "../../index.html";
       }, 2000);
