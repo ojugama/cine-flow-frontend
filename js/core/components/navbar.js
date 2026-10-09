@@ -16,11 +16,13 @@ document.addEventListener("DOMContentLoaded", () => {
     menuItems = `
             <li class="nav-item"><a class="nav-link fw-bold" href="/pages/admin/dashboard.html">Inicio</a></li>
             <li class="nav-item"><a class="nav-link" href="/pages/admin/usuarios.html">Usuarios</a></li>
+            <li class="nav-item"><a class="nav-link" href="/pages/perfil.html">Mi Perfil</a></li>
         `;
   } else {
     menuItems = `
-            <li class="nav-item"><a class="nav-link fw-bold" href="/pages/cliente/cartelera.html">Cartelera</a></li>
-            <li class="nav-item"><a class="nav-link" href="/pages/cliente/perfil.html">Mi Perfil</a></li>
+            <li class="nav-item"><a class="nav-link fw-bold" href="/pages/cliente/dashboard.html">Inicio</a></li>
+            <li class="nav-item"><a class="nav-link" href="/pages/cliente/cartelera.html">Cartelera</a></li>
+            <li class="nav-item"><a class="nav-link" href="/pages/perfil.html">Mi Perfil</a></li>
         `;
   }
 

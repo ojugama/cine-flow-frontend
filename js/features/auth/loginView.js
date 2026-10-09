@@ -24,7 +24,7 @@ loginForm.addEventListener("submit", async (event) => {
     if (rol === "ADMIN") {
       window.location.href = "pages/admin/dashboard.html";
     } else {
-      window.location.href = "pages/cliente/cartelera.html";
+      window.location.href = "pages/cliente/dashboard.html";
     }
   } else {
     errorMessage.classList.remove("d-none");
