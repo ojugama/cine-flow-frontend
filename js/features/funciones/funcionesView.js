@@ -25,9 +25,11 @@ async function init() {
   form.elements.fechaHoraFin.addEventListener("change", actualizarSalasDisponibles);
   tbody.addEventListener("click", onAction);
   try {
-    const [movies, rooms] = await Promise.all([getPeliculasOpcion(), getSalasOpcion()]);
-    todasLasSalas = rooms;
-    document.getElementById("idPelicula").innerHTML = '<option value="">Selecciona una película</option>' + movies.map(p => `<option value="${p.id}">${escapeHtml(p.titulo)} (${p.duracionMinutos} min)</option>`).join("");
+    const [moviesResult, roomsResult] = await Promise.all([getPeliculasOpcion(), getSalasOpcion()]);
+    const movies = moviesResult.content ?? [];
+    todasLasSalas = roomsResult.content ?? [];
+
+    document.getElementById("idPelicula").innerHTML = '<option value="">Selecciona una película</option>' + movies.map(p => <option value="${p.id}">${escapeHtml(p.titulo)} (${p.duracionMinutos} min)</option>).join("")
     renderRoomOptions();
     await loadFunciones();
   } catch (error) { showAlert(pageAlert, error.message); tbody.innerHTML = ""; }
