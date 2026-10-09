@@ -3,9 +3,7 @@ import { fetchApi } from "../../core/api/apiClient.js";
 export async function loginRequest(credentials) {
   return await fetchApi("/auth/login", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    auth: false,
     body: JSON.stringify(credentials),
   });
 }

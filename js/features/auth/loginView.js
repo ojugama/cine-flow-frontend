@@ -1,34 +1,52 @@
-import { authenticateUser, getRolToken } from "./authService.js";
+import { authenticateUser } from "./authService.js";
+import { redirectIfAuthenticated } from "../../core/auth/session.js";
+import { setLoading, showAlert } from "../../core/ui/alerts.js";
 
 const loginForm = document.getElementById("login-form");
 const emailInput = document.getElementById("email");
 const passwordInput = document.getElementById("password");
 const errorMessage = document.getElementById("error-message");
+const infoMessage = document.getElementById("info-message");
 const btnLogin = document.getElementById("btn-login");
 
-loginForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  errorMessage.classList.add("d-none");
-  const originalText = btnLogin.innerText;
-  btnLogin.innerText = "Cargando...";
-  btnLogin.disabled = true;
-  const credentials = {
-    email: emailInput.value.trim(),
-    password: passwordInput.value.trim(),
-  };
+if (!redirectIfAuthenticated()) {
+  showInfoFromQuery();
 
-  const success = await authenticateUser(credentials);
+  loginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    errorMessage.classList.add("d-none");
+    infoMessage.classList.add("d-none");
+    setLoading(btnLogin, true);
 
-  if (success) {
-    const rol = getRolToken();
-    if (rol === "ADMIN") {
-      window.location.href = "pages/admin/dashboard.html";
-    } else {
+    const credentials = {
+      email: emailInput.value.trim(),
+      password: passwordInput.value,
+    };
+
+    const { success, message } = await authenticateUser(credentials);
+
+    if (success) {
       window.location.href = "pages/cliente/dashboard.html";
+    } else {
+      errorMessage.textContent = message;
+      errorMessage.classList.remove("d-none");
+      setLoading(btnLogin, false);
     }
-  } else {
-    errorMessage.classList.remove("d-none");
-    btnLogin.innerText = originalText;
-    btnLogin.disabled = false;
+  });
+}
+
+function showInfoFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.has("expired")) {
+    showAlert(infoMessage, "Tu sesión expiró. Inicia sesión de nuevo.", "warning");
+  } else if (params.has("registered")) {
+    showAlert(infoMessage, "Cuenta creada. Ya puedes iniciar sesión.", "success");
+  } else if (params.has("emailChanged")) {
+    showAlert(
+      infoMessage,
+      "Cambiaste tu email. Inicia sesión con el nuevo para continuar.",
+      "info",
+    );
   }
-});
+}

@@ -1,54 +1,22 @@
 import { loginRequest } from "./authApi.js";
+import { saveToken } from "../../core/auth/session.js";
 
+/** Devuelve { success, message }. */
 export async function authenticateUser(credentials) {
   try {
     const responseData = await loginRequest(credentials);
 
     if (responseData.success && responseData.data && responseData.data.token) {
-      const token = responseData.data.token;
-      localStorage.setItem("jwt_token", token);
-      return true;
-    } else {
-      console.error(
-        "Ha fallado el login desde el servidor: ",
-        responseData.message,
-      );
-
-      return false;
+      saveToken(responseData.data.token);
+      return { success: true, message: "OK" };
     }
+
+    return {
+      success: false,
+      message: responseData.message || "Email o contraseña incorrectos.",
+    };
   } catch (error) {
     console.error("Ha ocurrido un error en la autenticación: ", error);
-
-    return false;
-  }
-}
-
-export function getRolToken() {
-  const token = localStorage.getItem("jwt_token");
-
-  if (!token) {
-    return null;
-  }
-
-  try {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      window
-        .atob(base64)
-        .split("")
-        .map(function (c) {
-          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-        })
-        .join(""),
-    );
-
-    const payload = JSON.parse(jsonPayload);
-
-    return payload.rol;
-  } catch (error) {
-    console.error("Error al decodificar el token JWT: ", error);
-
-    return null;
+    return { success: false, message: error.message };
   }
 }

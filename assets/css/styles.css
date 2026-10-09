@@ -1,0 +1,61 @@
+/* Paleta: rojo butaca de cine sobre grises cálidos */
+:root {
+  --cf-wine: #8c1d3a;
+  --cf-wine-dark: #6f152d;
+  --cf-ink: #211a22;
+
+  --bs-primary: var(--cf-wine);
+  --bs-primary-rgb: 140, 29, 58;
+  --bs-link-color: var(--cf-wine);
+  --bs-link-hover-color: var(--cf-wine-dark);
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--cf-wine);
+  --bs-btn-border-color: var(--cf-wine);
+  --bs-btn-hover-bg: var(--cf-wine-dark);
+  --bs-btn-hover-border-color: var(--cf-wine-dark);
+  --bs-btn-active-bg: var(--cf-wine-dark);
+  --bs-btn-active-border-color: var(--cf-wine-dark);
+  --bs-btn-disabled-bg: var(--cf-wine);
+  --bs-btn-disabled-border-color: var(--cf-wine);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--cf-wine);
+  --bs-btn-border-color: var(--cf-wine);
+  --bs-btn-hover-bg: var(--cf-wine);
+  --bs-btn-hover-border-color: var(--cf-wine);
+  --bs-btn-active-bg: var(--cf-wine-dark);
+  --bs-btn-active-border-color: var(--cf-wine-dark);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--cf-wine);
+  box-shadow: 0 0 0 0.25rem rgba(140, 29, 58, 0.2);
+}
+
+.page-link {
+  color: var(--cf-wine);
+}
+.page-item.active .page-link {
+  background-color: var(--cf-wine);
+  border-color: var(--cf-wine);
+  color: #fff;
+}
+
+.cf-navbar {
+  background-color: var(--cf-ink);
+  border-bottom: 3px solid var(--cf-wine);
+}
+
+.cf-card {
+  border: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.15s ease;
+}
+.cf-card:hover,
+.cf-card:focus-visible {
+  box-shadow: 0 0 0 2px var(--cf-wine);
+}

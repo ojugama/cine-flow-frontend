@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CineFlow - Funciones</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="../../assets/css/styles.css" />
+</head>
+<body class="bg-light">
+  <div id="navbar"></div>
+  <main class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <div><h1 class="h3 fw-bold mb-1">Funciones</h1><p class="text-muted mb-0">Programación de películas por sala y sucursal.</p></div>
+      <button class="btn btn-primary" id="btn-new">Crear función</button>
+    </div>
+    <div id="alert" class="alert d-none" role="alert"></div>
+    <section class="card border-0 shadow-sm mb-4 d-none" id="form-card">
+      <div class="card-body">
+        <h2 class="h5 fw-bold" id="form-title">Crear función</h2>
+        <form id="function-form">
+          <div id="form-alert" class="alert d-none" role="alert"></div>
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label" for="idPelicula">Película</label><select class="form-select" id="idPelicula" name="idPelicula" required><option value="">Selecciona una película</option></select></div>
+            <div class="col-md-6"><label class="form-label" for="idSala">Sala / sucursal</label><select class="form-select" id="idSala" name="idSala" required><option value="">Selecciona una sala</option></select></div>
+            <div class="col-md-6"><label class="form-label" for="fechaHoraInicio">Fecha y hora de inicio</label><input class="form-control" type="datetime-local" id="fechaHoraInicio" name="fechaHoraInicio" required /></div>
+            <div class="col-md-6"><label class="form-label" for="fechaHoraFin">Fecha y hora de fin</label><input class="form-control" type="datetime-local" id="fechaHoraFin" name="fechaHoraFin" required /></div>
+          </div>
+          <div class="d-flex gap-2 mt-3"><button class="btn btn-primary" type="submit" id="btn-save">Guardar función</button><button class="btn btn-outline-secondary" type="button" id="btn-cancel">Cancelar</button></div>
+        </form>
+      </div>
+    </section>
+    <div class="card border-0 shadow-sm"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+      <thead class="table-light"><tr><th>ID</th><th>Película</th><th>Sucursal</th><th>Sala</th><th>Inicio</th><th>Fin</th><th class="text-end admin-action">Acciones</th></tr></thead>
+      <tbody id="functions-body"><tr><td colspan="7" class="text-center text-muted py-4">Cargando funciones...</td></tr></tbody>
+    </table></div></div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module" src="../../js/features/funciones/funcionesView.js"></script>
+</body>
+</html>
