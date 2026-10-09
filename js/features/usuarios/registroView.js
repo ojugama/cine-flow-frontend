@@ -1,5 +1,5 @@
 import { registerUsuario } from "./usuarioService.js";
-import { authenticateUser } from "../auth/authService.js";
+import { authenticateUser, getRolToken } from "../auth/authService.js";
 
 const registerForm = document.getElementById("register-form");
 const nombresInput = document.getElementById("nombres");
@@ -45,7 +45,7 @@ registerForm.addEventListener("submit", async (event) => {
         if (rol === "ADMIN") {
           window.location.href = "../admin/dashboard.html";
         } else {
-          window.location.href = "../cliente/cartelera.html";
+          window.location.href = "../cliente/dashboard.html";
         }
       }, 1500);
     } else {
