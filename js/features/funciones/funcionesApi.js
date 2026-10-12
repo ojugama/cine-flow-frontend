@@ -8,4 +8,4 @@ export const createFuncionRequest = (data) =>
 export const updateFuncionRequest = (id, data) =>
   fetchApi(`/funciones/${id}`, json("PUT", data));
 export const deleteFuncionRequest = (id) =>
-  fetchApi(`/funciones/${id}`, { method: "DELETE" });
+  fetchApi(`/funciones/${id}`, { method: "PATCH" });
