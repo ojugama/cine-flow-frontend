@@ -12,7 +12,7 @@ import {
   getUsuarios,
   updateUsuario,
   desactivateUsuario,
-} from "./usuarioService.js";
+} from "./usuariosService.js";
 
 const tbody = document.getElementById("users-tbody");
 const pagination = document.getElementById("pagination");

@@ -1,7 +1,7 @@
 import { requireAuth } from "../../core/auth/session.js";
 import { renderNavbar } from "../../core/ui/navbar.js";
 import { escapeHtml, showAlert } from "../../core/ui/alerts.js";
-import { getMyProfile } from "../usuarios/usuarioService.js";
+import { getMyProfile } from "../usuarios/usuariosService.js";
 
 const session = requireAuth();
 if (session) init(session);
