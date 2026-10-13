@@ -7,15 +7,10 @@ export class ApiError extends Error {
     super(message);
     this.name = "ApiError";
     this.status = status;
-    // Para errores de validación: { campo: "mensaje" }
     this.data = data;
   }
 }
 
-/**
- * options.auth (default true): adjunta el JWT si existe.
- * El resto de opciones son las de fetch.
- */
 export async function fetchApi(endpoint, options = {}) {
   const { auth = true, headers = {}, ...fetchOptions } = options;
 
@@ -45,18 +40,14 @@ export async function fetchApi(endpoint, options = {}) {
   let json = null;
   try {
     json = await response.json();
-  } catch {
-    // Respuesta sin cuerpo JSON (p. ej. rechazo de Spring Security)
-  }
+  } catch {}
 
   if (!response.ok) {
-    // Token vencido o inválido: Spring responde 401/403 sin cuerpo JSON.
-    // Un 403 con JSON es "Acceso denegado" por rol, y no cierra la sesión.
     const sessionRejected =
       token && (response.status === 401 || (response.status === 403 && !json));
 
     if (sessionRejected) {
-      logout("?expired=1");
+      logout();
     }
 
     throw new ApiError(

@@ -1,166 +1,229 @@
+import { requireAuth, saveToken } from "../../core/auth/session.js";
+import { renderNavbar } from "../../core/ui/navbar.js";
+import {
+  clearFieldErrors,
+  escapeHtml,
+  hideAlert,
+  setLoading,
+  showAlert,
+  showFieldErrors,
+  showToast,
+} from "../../core/ui/alerts.js";
 import {
   getUsuarios,
   updateUsuario,
   desactivateUsuario,
 } from "./usuarioService.js";
 
-const tbody = document.getElementById("usuarios-tbody");
-const alertMessage = document.getElementById("alert-message");
+const tbody = document.getElementById("users-tbody");
+const pagination = document.getElementById("pagination");
+const summary = document.getElementById("summary");
+const pageAlert = document.getElementById("alert");
+const pageSizeSelect = document.getElementById("page-size");
 
-const formEdit = document.getElementById("edit-usuario-form");
-const edidNombresInput = document.getElementById("edit-nombres");
-const editApellidosInput = document.getElementById("edit-apellidos");
-const editEmailInput = document.getElementById("edit-email");
-const btnSaveEdit = document.getElementById("btn-save-edit");
+const editForm = document.getElementById("edit-form");
+const editAlert = document.getElementById("edit-alert");
+const deleteAlert = document.getElementById("delete-alert");
+const editModal = new bootstrap.Modal(document.getElementById("edit-modal"));
+const deleteModal = new bootstrap.Modal(
+  document.getElementById("delete-modal"),
+);
 
-let modalEdit;
+const state = { page: 0, size: 10, sort: "id,asc" };
 let usuariosLocales = [];
-let idUsuarioEditando = null;
+let usuarioSeleccionado = null;
 
-document.addEventListener("DOMContentLoaded", async () => {
-  modalEdit = new bootstrap.Modal(document.getElementById("editUsuarioModal"));
-  await loadTable();
-});
+let session = requireAuth({ adminOnly: true });
+if (session) init();
+
+function init() {
+  renderNavbar("users");
+
+  pageSizeSelect.addEventListener("change", (e) => {
+    state.size = Number(pageSizeSelect.value);
+    state.page = 0;
+    loadTable();
+  });
+
+  tbody.addEventListener("click", onRowAction);
+  pagination.addEventListener("click", onPageClick);
+  editForm.addEventListener("submit", onEditSubmit);
+  document
+    .getElementById("btn-delete-confirm")
+    .addEventListener("click", onDeleteConfirm);
+
+  loadTable();
+}
 
 async function loadTable() {
-  tbody.innerHTML =
-    "<tr><td colspan='7' class='text-center text-muted'>Cargando usuarios...</td></tr>";
+  hideAlert(pageAlert);
+  tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">Cargando usuarios...</td></tr>`;
 
-  const result = await getUsuarios();
+  const result = await getUsuarios(state);
 
   if (result.success) {
     usuariosLocales = result.data;
+
+    const meta = result.pageData.page ?? result.pageData;
+
     renderizarFilas(usuariosLocales);
+    renderPagination(meta);
   } else {
-    mostrarAlerta(result.message, "danger");
-    tbody.innerHTML =
-      "<tr><td colspan='7' class='text-center text-danger'>Error al cargar los usuarios.</td></tr>";
+    tbody.innerHTML = "";
+    pagination.inertHTML = "";
+    summary.textContent = "";
+    showAlert(pageAlert, result.message);
   }
 }
 
 function renderizarFilas(usuarios) {
-  tbody.innerHTML = "";
-
   if (usuarios.length === 0) {
-    tbody.innerHTML =
-      "<tr><td colspan='7' class='text-center text-muted'>No hay usuarios registrados.</td></tr>";
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No hay usuarios registrados.</td></tr>`;
     return;
   }
 
-  usuarios.forEach((usuario) => {
-    const tr = document.createElement("tr");
-
-    const estadoBadge = usuario.isActivo
-      ? '<span class="badge bg-success">Activo</span>'
-      : '<span class="badge bg-danger">Inactivo</span>';
-
-    const btnDesactivar =
-      usuario.isActivo && usuario.rol !== "ADMIN"
-        ? `<button class="btn btn-sm btn-outline-danger btn-desactivar ms-1" data-id="${usuario.id}">Desactivar</button>`
-        : "";
-
-    tr.innerHTML = `
-        <td class="fw-bold">${usuario.id}</td>
-        <td>${usuario.nombres}</td>
-        <td>${usuario.apellidos}</td>
-        <td>${usuario.email}</td>
-        <td><span class="badge bg-secondary">${usuario.rol}</span></td>
-        <td>${estadoBadge}</td>
-        <td class="text-center">
-            <button class="btn btn-sm btn-outline-primary btn-editar" data-id="${usuario.id}">Editar</button>
-            ${btnDesactivar}
+  tbody.innerHTML = usuarios
+    .map((u) => {
+      const isSelf = u.email === session.email;
+      const roleClass =
+        u.rol === "ADMIN" ? "badge bg-primary" : "badge bg-secondary";
+      return `
+      <tr>
+        <td class="fw-bold">${u.id}</td>
+        <td>${escapeHtml(u.nombres)} ${escapeHtml(u.apellidos)}</td>
+        <td>${escapeHtml(u.email)}</td>
+        <td><span class="badge ${roleClass}">${escapeHtml(u.rol)}</span></td>
+        <td class="text-end text-nowrap">
+          <button class="btn btn-sm btn-outline-primary" data-action="edit" data-id="${u.id}" 
+          ${isSelf ? "disabled title='Edita tus datos desde Mi Perfil'" : ""}>Editar</button>
+          <button class="btn btn-sm btn-outline-danger ms-1" data-action="delete" data-id="${u.id}" 
+          ${isSelf || u.rol === "ADMIN" ? "disabled title='No puedes desactivar una cuenta de administrador'" : ""}>Desactivar</button>
         </td>
-        `;
-
-    tbody.appendChild(tr);
-  });
-
-  asignarEventosBotones();
+      </tr>`;
+    })
+    .join("");
 }
 
-function asignarEventosBotones() {
-  document.querySelectorAll(".btn-editar").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      const id = parseInt(e.target.getAttribute("data-id"));
-      abrirModalEdicion(id);
-    });
-  });
+function renderPagination(meta) {
+  const { number, totalPages, totalElements } = meta;
+  const from = totalElements === 0 ? 0 : number * state.size + 1;
+  const to = Math.min((number + 1) * state.size, totalElements);
+  summary.textContent = `Mostrando ${from}–${to} de ${totalElements} usuarios`;
 
-  document.querySelectorAll(".btn-desactivar").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      const id = parseInt(e.target.getAttribute("data-id"));
-      await confirmarDesactivacion(id);
-    });
-  });
+  if (totalPages <= 1) {
+    pagination.innerHTML = "";
+    return;
+  }
+
+  const start = Math.max(0, Math.min(number - 2, totalPages - 5));
+  const end = Math.min(totalPages, start + 5);
+
+  const item = (label, page, { disabled = false, active = false } = {}) => `
+    <li class="page-item ${disabled ? "disabled" : ""} ${active ? "active" : ""}">
+      <button class="page-link" type="button" data-page="${page}"
+              ${active ? 'aria-current="page"' : ""}>${label}</button>
+    </li>`;
+
+  let html = item("Anterior", number - 1, { disabled: number === 0 });
+  for (let p = start; p < end; p++) {
+    html += item(p + 1, p, { active: p === number });
+  }
+  html += item("Siguiente", number + 1, { disabled: number >= totalPages - 1 });
+
+  pagination.innerHTML = html;
 }
 
-function abrirModalEdicion(id) {
-  const usuario = usuariosLocales.find((u) => u.id === id);
+function onPageClick(event) {
+  const button = event.target.closest("[data-page]");
+  if (!button || button.closest(".disabled")) return;
 
-  if (!usuario) return;
-
-  idUsuarioEditando = id;
-
-  edidNombresInput.value = usuario.nombres;
-  editApellidosInput.value = usuario.apellidos;
-  editEmailInput.value = usuario.email;
-
-  modalEdit.show();
+  state.page = Number(button.dataset.page);
+  loadTable();
 }
 
-formEdit.addEventListener("submit", async (e) => {
-  e.preventDefault();
+function onRowAction(event) {
+  const button = event.target.closest("[data-action]");
+  if (!button) return;
 
-  if (!idUsuarioEditando) return;
+  const id = Number(button.dataset.id);
+  usuarioSeleccionado = usuariosLocales.find((u) => u.id === id);
+  if (!usuarioSeleccionado) return;
 
-  const originalText = btnSaveEdit.innerText;
-  btnSaveEdit.innerText = "Guardando...";
-  btnSaveEdit.disabled = true;
+  if (button.dataset.action === "edit") {
+    abrirModalEdicion(usuarioSeleccionado);
+  } else {
+    abrirModalDesactivacion(usuarioSeleccionado);
+  }
+}
+
+function abrirModalEdicion(usuario) {
+  hideAlert(editAlert);
+  clearFieldErrors(editForm);
+  editForm.elements["nombres"].value = usuario.nombres;
+  editForm.elements["apellidos"].value = usuario.apellidos;
+  editForm.elements["email"].value = usuario.email;
+  editModal.show();
+}
+
+async function onEditSubmit(event) {
+  event.preventDefault();
+  if (!usuarioSeleccionado) return;
+
+  hideAlert(editAlert);
+  clearFieldErrors(editForm);
+
+  const button = document.getElementById("btn-edit-save");
+  setLoading(button, true, "Guardando...");
 
   const userData = {
-    nombres: edidNombresInput.value.trim(),
-    apellidos: editApellidosInput.value.trim(),
-    email: editEmailInput.value.trim(),
+    nombres: editForm.elements["nombres"].value.trim(),
+    apellidos: editForm.elements["apellidos"].value.trim(),
+    email: editForm.elements["email"].value.trim(),
   };
 
-  const result = await updateUsuario(idUsuarioEditando, userData);
-
-  btnSaveEdit.innerText = originalText;
-  btnSaveEdit.disabled = false;
+  const result = await updateUsuario(usuarioSeleccionado.id, userData);
+  setLoading(button, false);
 
   if (result.success) {
-    modalEdit.hide();
-    idUsuarioEditando = null;
-    mostrarAlerta("Usuario actualizado correctamente.", "success");
+    if (result.data?.token) {
+      saveToken(result.data.token);
+      renderNavbar("users");
+    }
+    editModal.hide();
+    usuarioSeleccionado = null;
+    showToast("Usuario actualizado correctamente.");
     await loadTable();
   } else {
-    alert("Ha ocurrido un error al editar el usuario: " + result.message);
-  }
-});
-
-async function confirmarDesactivacion(id) {
-  const confirmar = confirm(
-    "¿Estás seguro de que deseas desactivar este usuario?",
-  );
-
-  if (confirmar) {
-    const result = await desactivateUsuario(id);
-
-    if (result.success) {
-      mostrarAlerta("Usuario desactivado correctamente.", "success");
-      await loadTable();
-    } else {
-      alert("Ha ocurrido un error al desactivar el usuario: " + result.message);
+    if (!showFieldErrors(editForm, result.errors)) {
+      showAlert(editAlert, result.message);
     }
   }
 }
 
-function mostrarAlerta(mensaje, tipo) {
-  alertMessage.innerText = mensaje;
-  alertMessage.className = `alert alert-${tipo}`;
-  alertMessage.classList.remove("d-none");
+function abrirModalDesactivacion(usuario) {
+  hideAlert(deleteAlert);
+  document.getElementById("delete-name").textContent =
+    `${usuario.nombres} ${usuario.apellidos} (${usuario.email})`;
+  deleteModal.show();
+}
 
-  setTimeout(() => {
-    alertMessage.classList.add("d-none");
-  }, 4000);
+async function onDeleteConfirm(event) {
+  if (!usuarioSeleccionado) return;
+
+  const button = event.currentTarget;
+  hideAlert(deleteAlert);
+  setLoading(button, true, "Desactivando...");
+
+  const result = await desactivateUsuario(usuarioSeleccionado.id);
+  setLoading(button, false);
+
+  if (result.success) {
+    if (usuariosLocales.length === 1 && state.page > 0) state.page--;
+    deleteModal.hide();
+    usuarioSeleccionado = null;
+    showToast("Usuario desactivado correctamente.");
+    await loadTable();
+  } else {
+    showAlert(deleteAlert, result.message);
+  }
 }

@@ -39,14 +39,10 @@ function showInfoFromQuery() {
   const params = new URLSearchParams(window.location.search);
 
   if (params.has("expired")) {
-    showAlert(infoMessage, "Tu sesión expiró. Inicia sesión de nuevo.", "warning");
-  } else if (params.has("registered")) {
-    showAlert(infoMessage, "Cuenta creada. Ya puedes iniciar sesión.", "success");
-  } else if (params.has("emailChanged")) {
     showAlert(
       infoMessage,
-      "Cambiaste tu email. Inicia sesión con el nuevo para continuar.",
-      "info",
+      "Tu sesión expiró. Inicia sesión de nuevo.",
+      "warning",
     );
   }
 }
