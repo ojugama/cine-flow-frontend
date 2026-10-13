@@ -57,17 +57,16 @@ export function requireAuth({ adminOnly = false } = {}) {
   }
 
   if (adminOnly && session.rol !== "ADMIN") {
-    window.location.replace("/pages/cliente/dashboard.html");
+    window.location.replace("/pages/dashboard.html");
     return null;
   }
 
   return session;
 }
 
-/** Para login/registro: si ya hay sesión, no tiene sentido mostrarlos. */
 export function redirectIfAuthenticated() {
   if (getSession()) {
-    window.location.replace("/pages/cliente/dashboard.html");
+    window.location.replace("/pages/dashboard.html");
     return true;
   }
   return false;

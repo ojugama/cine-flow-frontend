@@ -1,9 +1,6 @@
 import { registerUsuario } from "./usuarioService.js";
 import { authenticateUser } from "../auth/authService.js";
-import {
-  getSession,
-  redirectIfAuthenticated,
-} from "../../core/auth/session.js";
+import { redirectIfAuthenticated } from "../../core/auth/session.js";
 import {
   clearFieldErrors,
   setLoading,
@@ -65,15 +62,11 @@ if (!redirectIfAuthenticated()) {
     });
 
     if (authResult.success) {
-      const session = getSession();
-      if (session?.rol === "ADMIN") {
-        window.location.href = "../admin/dashboard.html";
-      } else {
-        window.location.href = "../cliente/dashboard.html";
-      }
+      window.location.href = "/pages/dashboard.html";
     } else {
       errorMessage.textContent = authResult.message;
       errorMessage.classList.remove("d-none");
+
       setLoading(btnRegister, false);
     }
   });
