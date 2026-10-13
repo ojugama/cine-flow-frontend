@@ -1,4 +1,3 @@
-import { requireAuth, saveToken } from "../../core/auth/session.js";
 import { renderNavbar } from "../../core/ui/navbar.js";
 import {
   clearFieldErrors,

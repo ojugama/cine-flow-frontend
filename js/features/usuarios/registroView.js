@@ -1,9 +1,6 @@
 import { registerUsuario } from "./usuarioService.js";
 import { authenticateUser } from "../auth/authService.js";
-import {
-  getSession,
-  redirectIfAuthenticated,
-} from "../../core/auth/session.js";
+import { redirectIfAuthenticated } from "../../core/auth/session.js";
 import {
   clearFieldErrors,
   setLoading,

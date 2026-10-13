@@ -1,19 +1,16 @@
 import { authenticateUser } from "./authService.js";
 import { redirectIfAuthenticated } from "../../core/auth/session.js";
-import { setLoading, showAlert } from "../../core/ui/alerts.js";
 
 const loginForm = document.getElementById("login-form");
 const emailInput = document.getElementById("email");
 const passwordInput = document.getElementById("password");
 const errorMessage = document.getElementById("error-message");
-const infoMessage = document.getElementById("info-message");
 const btnLogin = document.getElementById("btn-login");
 
 if (!redirectIfAuthenticated()) {
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     errorMessage.classList.add("d-none");
-    infoMessage.classList.add("d-none");
     setLoading(btnLogin, true);
 
     const credentials = {
