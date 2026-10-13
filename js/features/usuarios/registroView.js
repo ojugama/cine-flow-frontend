@@ -1,65 +1,80 @@
 import { registerUsuario } from "./usuarioService.js";
-import { authenticateUser, getRolToken } from "../auth/authService.js";
+import { authenticateUser } from "../auth/authService.js";
+import {
+  getSession,
+  redirectIfAuthenticated,
+} from "../../core/auth/session.js";
+import {
+  clearFieldErrors,
+  setLoading,
+  showFieldErrors,
+} from "../../core/ui/alerts.js";
 
-const registerForm = document.getElementById("register-form");
-const nombresInput = document.getElementById("nombres");
-const apellidosInput = document.getElementById("apellidos");
-const emailInput = document.getElementById("email");
-const passwordInput = document.getElementById("password");
-const alertMessage = document.getElementById("alert-message");
+const form = document.getElementById("register-form");
+const errorMessage = document.getElementById("error-message");
 const btnRegister = document.getElementById("btn-register");
 
-registerForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  alertMessage.classList.add("d-none");
-  alertMessage.classList.remove("alert-success", "alert-danger");
-  const originalText = btnRegister.innerText;
-  btnRegister.innerText = "Cargando...";
-  btnRegister.disabled = true;
+if (!redirectIfAuthenticated()) {
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    errorMessage.classList.add("d-none");
+    clearFieldErrors(form);
 
-  const userData = {
-    nombres: nombresInput.value.trim(),
-    apellidos: apellidosInput.value.trim(),
-    email: emailInput.value.trim(),
-    password: passwordInput.value.trim(),
-  };
+    const password = form.elements["password"].value;
+    const confirmPassword = form.elements["confirmPassword"].value;
 
-  const result = await registerUsuario(userData);
-  alertMessage.classList.remove("d-none");
+    if (!password) {
+      form.elements["password"].classList.add("is-invalid");
+      errorMessage.textContent = "La contraseña es obligatoria.";
+      errorMessage.classList.remove("d-none");
+      return;
+    }
 
-  if (result.success) {
-    alertMessage.classList.add("alert-success");
-    alertMessage.innerText =
-      "Se ha registrado correctamente. Iniciando sesión...";
+    if (password !== confirmPassword) {
+      form.elements["confirmPassword"].classList.add("is-invalid");
+      errorMessage.textContent = "Las contraseñas no coinciden.";
+      errorMessage.classList.remove("d-none");
+      return;
+    }
 
-    const credentials = {
+    setLoading(btnRegister, true, "Creando cuenta...");
+
+    const userData = {
+      nombres: form.elements["nombres"].value.trim(),
+      apellidos: form.elements["apellidos"].value.trim(),
+      email: form.elements["email"].value.trim(),
+      password,
+    };
+
+    const result = await registerUsuario(userData);
+
+    if (!result.success) {
+      if (!showFieldErrors(form, result.errors)) {
+        errorMessage.textContent = result.message;
+        errorMessage.classList.remove("d-none");
+      }
+
+      setLoading(btnRegister, false);
+
+      return;
+    }
+
+    const authResult = await authenticateUser({
       email: userData.email,
       password: userData.password,
-    };
-    const loginSuccess = await authenticateUser(credentials);
+    });
 
-    if (loginSuccess) {
-      const rol = getRolToken();
-
-      setTimeout(() => {
-        if (rol === "ADMIN") {
-          window.location.href = "../admin/dashboard.html";
-        } else {
-          window.location.href = "../cliente/dashboard.html";
-        }
-      }, 1500);
+    if (authResult.success) {
+      const session = getSession();
+      if (session?.rol === "ADMIN") {
+        window.location.href = "../admin/dashboard.html";
+      } else {
+        window.location.href = "../cliente/dashboard.html";
+      }
     } else {
-      alertMessage.innerText =
-        "Se ha registrado correctamente. Por favor, inicie sesión manualmente.";
-
-      setTimeout(() => {
-        window.location.href = "../../index.html";
-      }, 2000);
+      errorMessage.textContent = authResult.message;
+      errorMessage.classList.remove("d-none");
+      setLoading(btnRegister, false);
     }
-  } else {
-    alertMessage.classList.add("alert-danger");
-    alertMessage.innerText = result.message;
-    btnRegister.innerText = originalText;
-    btnRegister.disabled = false;
-  }
-});
+  });
+}

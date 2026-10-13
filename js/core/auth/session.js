@@ -27,10 +27,6 @@ function decodePayload(token) {
   }
 }
 
-/**
- * Devuelve { email, rol, exp } si hay un token vigente; null en caso contrario.
- * Solo sirve para decidir qué mostrar: la seguridad real la aplica el backend.
- */
 export function getSession() {
   const token = getToken();
   if (!token) return null;
@@ -52,12 +48,11 @@ export function logout(query = "") {
   window.location.replace(`/index.html${query}`);
 }
 
-/** Protege una página privada. Devuelve la sesión o null (y redirige). */
 export function requireAuth({ adminOnly = false } = {}) {
   const session = getSession();
 
   if (!session) {
-    logout(getToken() ? "?expired=1" : "");
+    logout();
     return null;
   }
 

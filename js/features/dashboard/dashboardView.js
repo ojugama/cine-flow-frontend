@@ -1,7 +1,7 @@
 import { requireAuth } from "../../core/auth/session.js";
 import { renderNavbar } from "../../core/ui/navbar.js";
 import { escapeHtml, showAlert } from "../../core/ui/alerts.js";
-import { getMe } from "../usuarios/usuariosService.js";
+import { getMyProfile } from "../usuarios/usuarioService.js";
 
 const session = requireAuth();
 if (session) init(session);
@@ -10,15 +10,16 @@ async function init(session) {
   renderNavbar("dashboard");
   renderCards(session.rol === "ADMIN");
 
-  try {
-    const me = await getMe();
-    document.getElementById("welcome").textContent = `Hola, ${me.nombres}`;
+  const result = await getMyProfile();
+  if (result.success) {
+    document.getElementById("welcome").textContent =
+      `Hola, ${result.data.nombres}`;
     document.getElementById("subtitle").textContent =
-      me.rol === "ADMIN"
+      result.data.rol === "ADMIN"
         ? "Tienes acceso de administrador."
         : "Qué bueno verte de nuevo.";
-  } catch (error) {
-    showAlert(document.getElementById("alert"), error.message);
+  } else {
+    showAlert(document.getElementById("alert"), result.message);
   }
 }
 
@@ -33,6 +34,11 @@ function renderCards(isAdmin) {
 
   if (isAdmin) {
     cards.push({
+      href: "/pages/admin/peliculas.html",
+      title: "Películas",
+      text: "Administra el catálogo de películas en cartelera.",
+    });
+    cards.push({
       href: "/pages/admin/funciones.html",
       title: "Funciones",
       text: "Programa, consulta, edita y elimina funciones de películas.",
@@ -40,7 +46,7 @@ function renderCards(isAdmin) {
     cards.push({
       href: "/pages/admin/usuarios.html",
       title: "Usuarios",
-      text: "Consulta, edita y elimina las cuentas registradas.",
+      text: "Consulta, edita y desactiva las cuentas registradas.",
     });
   }
 
