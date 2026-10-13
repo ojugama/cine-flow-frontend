@@ -10,8 +10,6 @@ const infoMessage = document.getElementById("info-message");
 const btnLogin = document.getElementById("btn-login");
 
 if (!redirectIfAuthenticated()) {
-  showInfoFromQuery();
-
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     errorMessage.classList.add("d-none");
@@ -26,23 +24,11 @@ if (!redirectIfAuthenticated()) {
     const { success, message } = await authenticateUser(credentials);
 
     if (success) {
-      window.location.href = "pages/cliente/dashboard.html";
+      window.location.href = "pages/dashboard.html";
     } else {
       errorMessage.textContent = message;
       errorMessage.classList.remove("d-none");
       setLoading(btnLogin, false);
     }
   });
-}
-
-function showInfoFromQuery() {
-  const params = new URLSearchParams(window.location.search);
-
-  if (params.has("expired")) {
-    showAlert(
-      infoMessage,
-      "Tu sesión expiró. Inicia sesión de nuevo.",
-      "warning",
-    );
-  }
 }

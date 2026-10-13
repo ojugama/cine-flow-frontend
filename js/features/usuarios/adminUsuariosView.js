@@ -70,7 +70,7 @@ async function loadTable() {
     renderPagination(meta);
   } else {
     tbody.innerHTML = "";
-    pagination.inertHTML = "";
+    pagination.innerHTML = "";
     summary.textContent = "";
     showAlert(pageAlert, result.message);
   }
@@ -85,8 +85,7 @@ function renderizarFilas(usuarios) {
   tbody.innerHTML = usuarios
     .map((u) => {
       const isSelf = u.email === session.email;
-      const roleClass =
-        u.rol === "ADMIN" ? "badge bg-primary" : "badge bg-secondary";
+      const roleClass = u.rol === "ADMIN" ? "bg-primary" : "bg-secondary";
       return `
       <tr>
         <td class="fw-bold">${u.id}</td>
@@ -185,10 +184,6 @@ async function onEditSubmit(event) {
   setLoading(button, false);
 
   if (result.success) {
-    if (result.data?.token) {
-      saveToken(result.data.token);
-      renderNavbar("users");
-    }
     editModal.hide();
     usuarioSeleccionado = null;
     showToast("Usuario actualizado correctamente.");

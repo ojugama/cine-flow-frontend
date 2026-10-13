@@ -7,13 +7,25 @@ export function renderNavbar(activePage) {
   if (!host || !session) return;
 
   const links = [
-    { id: "dashboard", href: "/pages/cliente/dashboard.html", label: "Inicio" },
+    { id: "dashboard", href: "/pages/dashboard.html", label: "Inicio" },
     { id: "profile", href: "/pages/perfil.html", label: "Mi perfil" },
   ];
   if (session.rol === "ADMIN") {
-    links.push({ id: "users", href: "/pages/admin/usuarios.html", label: "Usuarios" });
-    links.push({ id: "peliculas", href: "/pages/admin/peliculas.html", label: "Películas" });
-    links.push({ id: "funciones", href: "/pages/admin/funciones.html", label: "Funciones" });
+    links.push({
+      id: "users",
+      href: "/pages/admin/usuarios.html",
+      label: "Usuarios",
+    });
+    links.push({
+      id: "peliculas",
+      href: "/pages/admin/peliculas.html",
+      label: "Películas",
+    });
+    links.push({
+      id: "funciones",
+      href: "/pages/admin/funciones.html",
+      label: "Funciones",
+    });
   }
 
   const items = links
@@ -30,7 +42,7 @@ export function renderNavbar(activePage) {
   host.innerHTML = `
     <nav class="navbar navbar-expand-md navbar-dark cf-navbar">
       <div class="container">
-        <a class="navbar-brand fw-bold" href="/pages/cliente/dashboard.html">CineFlow</a>
+        <a class="navbar-brand fw-bold" href="/pages/dashboard.html">CineFlow</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
                 data-bs-target="#navbar-content" aria-controls="navbar-content"
                 aria-expanded="false" aria-label="Abrir menú">
@@ -49,5 +61,7 @@ export function renderNavbar(activePage) {
       </div>
     </nav>`;
 
-  document.getElementById("btn-logout").addEventListener("click", () => logout());
+  document
+    .getElementById("btn-logout")
+    .addEventListener("click", () => logout());
 }
