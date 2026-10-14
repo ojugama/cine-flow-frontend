@@ -8,6 +8,7 @@ import {
   showFieldErrors,
   showToast,
 } from "../../core/ui/alerts.js";
+import { requireAuth } from "../../core/auth/session.js";
 import {
   getUsuarios,
   updateUsuario,
