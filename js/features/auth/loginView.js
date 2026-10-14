@@ -1,5 +1,6 @@
 import { authenticateUser } from "./authService.js";
 import { redirectIfAuthenticated } from "../../core/auth/session.js";
+import { setLoading } from "../../core/ui/alerts.js";
 
 const loginForm = document.getElementById("login-form");
 const emailInput = document.getElementById("email");
