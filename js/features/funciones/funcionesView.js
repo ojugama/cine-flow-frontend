@@ -38,6 +38,7 @@ let editingId = null;
 let funcionSeleccionada = null;
 let funciones = [];
 let todasLasSalas = [];
+let todasLasPeliculas = []; // Nueva variable para guardar las películas
 
 if (session) init();
 
@@ -49,14 +50,11 @@ async function init() {
     .addEventListener("click", () => openForm());
   document.getElementById("btn-cancel").addEventListener("click", closeForm);
   form.addEventListener("submit", saveForm);
-  form.elements.fechaHoraInicio.addEventListener(
-    "change",
-    actualizarSalasDisponibles,
-  );
-  form.elements.fechaHoraFin.addEventListener(
-    "change",
-    actualizarSalasDisponibles,
-  );
+
+  // Agregamos los listeners para calcular la fecha fin automáticamente
+  form.elements.idPelicula.addEventListener("change", calcularFechaFin);
+  form.elements.fechaHoraInicio.addEventListener("change", calcularFechaFin);
+
   tbody.addEventListener("click", onAction);
   pagination.addEventListener("click", onPageClick);
   pageSizeSelect.addEventListener("change", () => {
@@ -73,16 +71,19 @@ async function init() {
       getPeliculasOpcion(),
       getSalasOpcion(),
     ]);
-    const movies = Array.isArray(moviesResult)
+
+    // Guardamos las películas en la variable global
+    todasLasPeliculas = Array.isArray(moviesResult)
       ? moviesResult
       : (moviesResult.content ?? []);
+
     todasLasSalas = Array.isArray(roomsResult)
       ? roomsResult
       : (roomsResult.content ?? []);
 
     document.getElementById("idPelicula").innerHTML =
       '<option value="">Selecciona una película</option>' +
-      movies
+      todasLasPeliculas
         .map(
           (p) =>
             `<option value="${p.id}">${escapeHtml(p.titulo)} (${p.duracionMinutos} min)</option>`,
@@ -199,6 +200,35 @@ function formatDate(value) {
 
 function localInput(value) {
   return value ? value.slice(0, 16) : "";
+}
+
+// Nueva función que calcula la fecha de fin y actualiza las salas
+function calcularFechaFin() {
+  const peliculaId = Number(form.elements.idPelicula.value);
+  const fechaInicioStr = form.elements.fechaHoraInicio.value;
+
+  if (peliculaId && fechaInicioStr) {
+    const pelicula = todasLasPeliculas.find((p) => p.id === peliculaId);
+
+    if (pelicula && pelicula.duracionMinutos) {
+      const fechaInicio = new Date(fechaInicioStr);
+
+      // Sumamos la duración (en minutos * 60000 milisegundos)
+      const fechaFin = new Date(
+        fechaInicio.getTime() + pelicula.duracionMinutos * 60000,
+      );
+
+      // Ajustamos al huso horario local para que formatee bien en el input datetime-local
+      const tzOffset = fechaFin.getTimezoneOffset() * 60000;
+      const localISOTime = new Date(fechaFin.getTime() - tzOffset)
+        .toISOString()
+        .slice(0, 16);
+
+      form.elements.fechaHoraFin.value = localISOTime;
+    }
+  }
+
+  actualizarSalasDisponibles();
 }
 
 function openForm(funcion = null) {
