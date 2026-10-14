@@ -8,7 +8,7 @@ import {
   updateMyProfileRequest,
   deleteMyProfileRequest,
   updateMyPasswordRequest,
-} from "./usuarioApi.js";
+} from "./usuariosApi.js";
 import { saveToken } from "../../core/auth/session.js";
 
 export async function registerUsuario(userData) {

@@ -13,7 +13,7 @@ import {
   updateMyProfile,
   updateMyPassword,
   deleteMyProfile,
-} from "./usuarioService.js";
+} from "./usuariosService.js";
 
 const profileForm = document.getElementById("profile-form");
 const passwordForm = document.getElementById("password-form");

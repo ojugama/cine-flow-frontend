@@ -1,4 +1,4 @@
-import { registerUsuario } from "./usuarioService.js";
+import { registerUsuario } from "./usuariosService.js";
 import { authenticateUser } from "../auth/authService.js";
 import { redirectIfAuthenticated } from "../../core/auth/session.js";
 import {
