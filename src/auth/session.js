@@ -1,0 +1,44 @@
+const TOKEN_KEY = "jwt_token";
+
+export function saveToken(token) {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function clearSession() {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+function decodePayload(token) {
+  try {
+    const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const json = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0"))
+        .join(""),
+    );
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+export function getSession() {
+  const token = getToken();
+  if (!token) return null;
+
+  const payload = decodePayload(token);
+  if (!payload || !payload.exp || payload.exp * 1000 <= Date.now()) {
+    return null;
+  }
+
+  return { email: payload.sub, rol: payload.rol, exp: payload.exp };
+}
+
+export function isAdmin() {
+  return getSession()?.rol === "ADMIN";
+}
