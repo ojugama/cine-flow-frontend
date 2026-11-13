@@ -28,6 +28,18 @@ export default function DashboardPage() {
 
   const cards = [
     {
+      to: "/cartelera",
+      icon: "fa-film",
+      title: "Cartelera",
+      text: "Elige una película y su función para comprar tus boletas.",
+    },
+    {
+      to: "/mis-compras",
+      icon: "fa-ticket",
+      title: "Mis compras",
+      text: "Consulta tus boletas, combos y códigos de compra.",
+    },
+    {
       to: "/perfil",
       icon: "fa-user",
       title: "Mi perfil",

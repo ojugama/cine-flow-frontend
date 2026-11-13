@@ -6,6 +6,9 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import ProfilePage from "./pages/ProfilePage";
+import CarteleraPage from "./pages/CarteleraPage";
+import ComprarPage from "./pages/ComprarPage";
+import MisComprasPage from "./pages/MisComprasPage";
 import AdminUsuariosPage from "./pages/AdminUsuariosPage";
 import AdminPeliculasPage from "./pages/AdminPeliculasPage";
 import AdminFuncionesPage from "./pages/AdminFuncionesPage";
@@ -22,6 +25,9 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/perfil" element={<ProfilePage />} />
+          <Route path="/cartelera" element={<CarteleraPage />} />
+          <Route path="/comprar/:idPelicula" element={<ComprarPage />} />
+          <Route path="/mis-compras" element={<MisComprasPage />} />
         </Route>
       </Route>
 

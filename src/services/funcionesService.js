@@ -10,6 +10,14 @@ export function getPeliculasOpcion() {
   });
 }
 
+export function listFuncionesByPelicula(idPelicula) {
+  return api.get(`/funciones/pelicula/${idPelicula}`);
+}
+
+export function getFuncionById(id) {
+  return api.get(`/funciones/${id}`);
+}
+
 export function getSalasOpcion() {
   return api.get("/salas", {
     params: { page: 0, size: 100, sort: "id,asc" },

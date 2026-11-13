@@ -25,6 +25,14 @@ export default function Layout() {
                 <i className="fa-solid fa-house me-1" />
                 Inicio
               </Nav.Link>
+              <Nav.Link as={NavLink} to="/cartelera">
+                <i className="fa-solid fa-film me-1" />
+                Cartelera
+              </Nav.Link>
+              <Nav.Link as={NavLink} to="/mis-compras">
+                <i className="fa-solid fa-ticket me-1" />
+                Mis compras
+              </Nav.Link>
               <Nav.Link as={NavLink} to="/perfil">
                 <i className="fa-solid fa-user me-1" />
                 Mi perfil

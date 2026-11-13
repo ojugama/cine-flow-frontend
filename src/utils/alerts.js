@@ -12,6 +12,10 @@ export function notifySuccess(message) {
   return Toast.fire({ icon: "success", title: message });
 }
 
+export function notifyInfo(message) {
+  return Toast.fire({ icon: "info", title: message });
+}
+
 export function notifyError(message) {
   return Swal.fire({
     icon: "error",
