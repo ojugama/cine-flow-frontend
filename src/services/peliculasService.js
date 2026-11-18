@@ -19,3 +19,9 @@ export function updatePelicula(id, data) {
 export function deletePelicula(id) {
   return api.patch(`/peliculas/${id}`);
 }
+
+export function uploadPeliculaImagen(id, file) {
+  const formData = new FormData();
+  formData.append("imagen", file);
+  return api.post(`/peliculas/${id}/imagen`, formData);
+}

@@ -1,5 +1,20 @@
+import { API_BASE_URL } from "../api/apiClient";
+
 export function normalizeList(data) {
   return Array.isArray(data) ? data : (data?.content ?? []);
+}
+
+export function resolveImageUrl(value) {
+  if (!value) return "";
+
+  const url = String(value).trim();
+  if (!url) return "";
+  if (/^(https?:)?\/\//i.test(url) || url.startsWith("data:") || url.startsWith("blob:")) {
+    return url;
+  }
+
+  const origin = new URL(API_BASE_URL, window.location.origin).origin;
+  return `${origin}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
 export function formatDateTime(value) {

@@ -12,7 +12,31 @@ import {
 import { Link } from "react-router-dom";
 import { listFunciones } from "../services/funcionesService";
 import { listPeliculas } from "../services/peliculasService";
-import { normalizeList } from "../utils/format";
+import { normalizeList, resolveImageUrl } from "../utils/format";
+
+function MoviePoster({ movie }) {
+  const [failed, setFailed] = useState(false);
+  const src = resolveImageUrl(movie.imagenUrl);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  return (
+    <div className="cf-poster">
+      {src && !failed ? (
+        <img
+          src={src}
+          alt={`Póster de ${movie.titulo}`}
+          className="cf-poster-img"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <i className="fa-solid fa-clapperboard" />
+      )}
+    </div>
+  );
+}
 
 export default function CarteleraPage() {
   const [movies, setMovies] = useState([]);
@@ -137,9 +161,7 @@ export default function CarteleraPage() {
             return (
               <Col md={6} lg={4} key={movie.id}>
                 <Card className="cf-card cf-movie-card h-100">
-                  <div className="cf-poster">
-                    <i className="fa-solid fa-clapperboard" />
-                  </div>
+                  <MoviePoster movie={movie} />
                   <Card.Body className="d-flex flex-column">
                     <h2 className="h5 fw-bold mb-2">{movie.titulo}</h2>
                     <div className="mb-2">

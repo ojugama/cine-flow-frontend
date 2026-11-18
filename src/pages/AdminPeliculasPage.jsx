@@ -22,14 +22,40 @@ import {
   deletePelicula,
   listPeliculas,
   updatePelicula,
+  uploadPeliculaImagen,
 } from "../services/peliculasService";
+import { resolveImageUrl } from "../utils/format";
+
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 const emptyForm = {
   titulo: "",
   genero: "",
   duracionMinutos: "",
   sinopsis: "",
+  imagenUrl: "",
 };
+
+function PosterThumb({ movie }) {
+  const [failed, setFailed] = useState(false);
+  const src = resolveImageUrl(movie.imagenUrl);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  if (!src || failed) return <span className="text-muted">—</span>;
+
+  return (
+    <img
+      src={src}
+      alt=""
+      className="cf-admin-thumb"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 export default function AdminPeliculasPage() {
   const [page, setPage] = useState(0);
@@ -45,7 +71,18 @@ export default function AdminPeliculasPage() {
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
   const formCardRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreviewUrl);
+      }
+    };
+  }, [imagePreviewUrl]);
 
   const loadPeliculas = useCallback(async () => {
     setLoading(true);
@@ -82,11 +119,20 @@ export default function AdminPeliculasPage() {
     setPage(0);
   }
 
+  function resetImageSelection() {
+    setImageFile(null);
+    setImagePreviewUrl("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
   function resetForm() {
     setForm(emptyForm);
     setEditingId(null);
     setFormError("");
     setFieldErrors({});
+    resetImageSelection();
   }
 
   function openCreate() {
@@ -101,9 +147,11 @@ export default function AdminPeliculasPage() {
       genero: movie.genero ?? "",
       duracionMinutos: movie.duracionMinutos ?? "",
       sinopsis: movie.sinopsis ?? "",
+      imagenUrl: movie.imagenUrl ?? "",
     });
     setFormError("");
     setFieldErrors({});
+    resetImageSelection();
     setFormOpen(true);
   }
 
@@ -115,6 +163,38 @@ export default function AdminPeliculasPage() {
   function handleChange(event) {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function handleFileChange(event) {
+    const file = event.target.files?.[0] ?? null;
+    if (!file) return;
+
+    if (!IMAGE_TYPES.includes(file.type)) {
+      setFieldErrors((current) => ({
+        ...current,
+        imagen: "Formato no permitido. Usa una imagen JPG, PNG, WEBP o GIF.",
+      }));
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      setFieldErrors((current) => ({
+        ...current,
+        imagen: "La imagen debe pesar máximo 5 MB.",
+      }));
+      event.target.value = "";
+      return;
+    }
+
+    setFieldErrors((current) => ({ ...current, imagen: undefined }));
+    setImageFile(file);
+    setImagePreviewUrl(URL.createObjectURL(file));
+  }
+
+  function handleRemoveFile() {
+    resetImageSelection();
+    setFieldErrors((current) => ({ ...current, imagen: undefined }));
   }
 
   async function handleSubmit(event) {
@@ -142,16 +222,37 @@ export default function AdminPeliculasPage() {
       genero: form.genero.trim() || null,
       duracionMinutos: duration,
       sinopsis: form.sinopsis.trim() || null,
+      imagenUrl: form.imagenUrl.trim() || null,
     };
 
     setSaving(true);
     const wasEditing = editingId !== null;
+    let savedId = editingId;
 
     try {
       if (wasEditing) {
         await updatePelicula(editingId, data);
       } else {
-        await createPelicula(data);
+        const created = await createPelicula(data);
+        savedId = created?.data?.id ?? null;
+        if (savedId != null) {
+          setEditingId(savedId);
+        }
+      }
+
+      if (imageFile) {
+        if (savedId == null) {
+          throw new Error(
+            "No se pudo obtener el ID de la película para subir la imagen.",
+          );
+        }
+        const uploaded = await uploadPeliculaImagen(savedId, imageFile);
+        if (uploaded?.data?.imagenUrl) {
+          setForm((current) => ({
+            ...current,
+            imagenUrl: uploaded.data.imagenUrl,
+          }));
+        }
       }
 
       closeForm();
@@ -201,6 +302,8 @@ export default function AdminPeliculasPage() {
       notifyError(requestError.message);
     }
   }
+
+  const posterPreviewSrc = imagePreviewUrl || resolveImageUrl(form.imagenUrl);
 
   return (
     <>
@@ -332,6 +435,67 @@ export default function AdminPeliculasPage() {
                     )}
                   </Form.Group>
                 </Col>
+
+                <Col xs={12}>
+                  <Form.Group controlId="imagen-pelicula">
+                    <Form.Label>Imagen de la cartelera</Form.Label>
+                    <div className="d-flex flex-wrap align-items-start gap-3">
+                      <div className="cf-admin-poster-preview">
+                        {posterPreviewSrc ? (
+                          <img src={posterPreviewSrc} alt="Vista previa del póster" />
+                        ) : (
+                          <i className="fa-solid fa-clapperboard" />
+                        )}
+                      </div>
+                      <div className="flex-grow-1">
+                        <Form.Control
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp,image/gif"
+                          onChange={handleFileChange}
+                          ref={fileInputRef}
+                          isInvalid={Boolean(fieldErrors.imagen)}
+                        />
+                        <Form.Text className="text-muted d-block mt-1">
+                          JPG, PNG, WEBP o GIF · máximo 5 MB. El archivo
+                          reemplaza la URL si ambas están definidas.
+                        </Form.Text>
+                        {imageFile && (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="p-0"
+                            onClick={handleRemoveFile}
+                            disabled={saving}
+                          >
+                            Quitar archivo seleccionado
+                          </Button>
+                        )}
+                        {fieldErrors.imagen && (
+                          <div className="invalid-feedback d-block">
+                            {fieldErrors.imagen}
+                          </div>
+                        )}
+                        <Form.Label className="mt-3">
+                          O pegar una URL de imagen
+                        </Form.Label>
+                        <Form.Control
+                          type="url"
+                          name="imagenUrl"
+                          maxLength={500}
+                          placeholder="https://ejemplo.com/poster.jpg"
+                          value={form.imagenUrl}
+                          onChange={handleChange}
+                          isInvalid={Boolean(fieldErrors.imagenUrl)}
+                        />
+                        {fieldErrors.imagenUrl && (
+                          <div className="invalid-feedback d-block">
+                            {fieldErrors.imagenUrl}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Form.Group>
+                </Col>
               </Row>
 
               <div className="d-flex gap-2 mt-3">
@@ -378,6 +542,7 @@ export default function AdminPeliculasPage() {
               <tr>
                 <th>ID</th>
                 <th>Título</th>
+                <th>Imagen</th>
                 <th>Género</th>
                 <th>Duración</th>
                 <th>Sinopsis</th>
@@ -387,13 +552,13 @@ export default function AdminPeliculasPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="text-center text-muted py-4">
+                  <td colSpan={7} className="text-center text-muted py-4">
                     Cargando películas...
                   </td>
                 </tr>
               ) : movies.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center text-muted py-4">
+                  <td colSpan={7} className="text-center text-muted py-4">
                     No hay películas registradas.
                   </td>
                 </tr>
@@ -402,6 +567,9 @@ export default function AdminPeliculasPage() {
                   <tr key={movie.id}>
                     <td className="fw-bold">{movie.id}</td>
                     <td className="fw-semibold">{movie.titulo}</td>
+                    <td>
+                      <PosterThumb movie={movie} />
+                    </td>
                     <td>{movie.genero || "—"}</td>
                     <td>{movie.duracionMinutos} min</td>
                     <td

@@ -6,6 +6,10 @@ const proxy = {
     target: "http://localhost:8081",
     changeOrigin: true,
   },
+  "/uploads": {
+    target: "http://localhost:8081",
+    changeOrigin: true,
+  },
 };
 
 export default defineConfig({
