@@ -25,6 +25,11 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/perfil" element={<ProfilePage />} />
+        </Route>
+      </Route>
+
+      <Route element={<ProtectedRoute clientOnly />}>
+        <Route element={<Layout />}>
           <Route path="/cartelera" element={<CarteleraPage />} />
           <Route path="/comprar/:idPelicula" element={<ComprarPage />} />
           <Route path="/mis-compras" element={<MisComprasPage />} />

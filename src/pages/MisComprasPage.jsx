@@ -1,17 +1,51 @@
 import { useEffect, useState } from "react";
-import { Badge, Button, Card, Col, Row, Table } from "react-bootstrap";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Col,
+  Row,
+  Spinner,
+  Table,
+} from "react-bootstrap";
 import { Link } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
-import { getPurchasesByUser } from "../data/purchases";
-import { formatCurrency, formatDateTime } from "../utils/format";
+import { listMyCompras } from "../services/comprasService";
+import {
+  formatCurrency,
+  formatDateTime,
+  normalizeList,
+} from "../utils/format";
 
 export default function MisComprasPage() {
-  const { session } = useAuth();
   const [purchases, setPurchases] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    setPurchases(getPurchasesByUser(session?.email));
-  }, [session?.email]);
+    let active = true;
+
+    async function load() {
+      setLoading(true);
+      setError("");
+
+      try {
+        const response = await listMyCompras();
+        if (!active) return;
+        setPurchases(normalizeList(response.data));
+      } catch (requestError) {
+        if (active) setError(requestError.message);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    load();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <>
@@ -31,7 +65,14 @@ export default function MisComprasPage() {
         </Button>
       </div>
 
-      {purchases.length === 0 ? (
+      {error && <Alert variant="danger">{error}</Alert>}
+
+      {loading ? (
+        <div className="text-center text-muted py-5">
+          <Spinner animation="border" role="status" className="me-2" />
+          Cargando compras...
+        </div>
+      ) : purchases.length === 0 ? (
         <Card className="border-0 shadow-sm">
           <Card.Body className="text-center py-5">
             <i className="fa-solid fa-ticket-simple fs-1 text-muted d-block mb-3" />
@@ -49,55 +90,79 @@ export default function MisComprasPage() {
       ) : (
         <Row className="g-4">
           {purchases.map((purchase) => {
-            const boletasTotal =
-              (purchase.seats?.length ?? 0) * (purchase.ticketPrice ?? 0);
+            const seats = purchase.sillas ?? purchase.seats ?? [];
+            const ticketPrice =
+              purchase.precioBoleta ?? purchase.ticketPrice ?? 0;
+            const boletasTotal = seats.length * ticketPrice;
+            const codigo = purchase.codigo ?? purchase.id;
+            const tituloPelicula =
+              purchase.tituloPelicula ??
+              purchase.pelicula?.titulo ??
+              "Película";
+            const fechaInicioFuncion =
+              purchase.fechaHoraInicioFuncion ??
+              purchase.funcion?.fechaHoraInicio;
+            const formatoSala =
+              purchase.formatoSala ?? purchase.funcion?.formatoSala;
+            const nombreSucursal =
+              purchase.nombreSucursal ??
+              purchase.funcion?.nombreSucursal ??
+              "Sucursal";
+            const ciudadSucursal =
+              purchase.ciudadSucursal ?? purchase.funcion?.ciudadSucursal;
+            const nombreSala =
+              purchase.nombreSala ?? purchase.funcion?.nombreSala ?? "Sala";
+            const fechaCompra = purchase.fechaCompra ?? purchase.createdAt;
 
             return (
-              <Col xl={6} key={purchase.id}>
+              <Col xl={6} key={purchase.id ?? codigo}>
                 <Card className="border-0 shadow-sm h-100">
                   <Card.Header className="bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <span className="fw-bold">
                       <i className="fa-solid fa-barcode me-1 text-primary" />
-                      {purchase.id}
+                      {codigo}
                     </span>
-                    <Badge bg="success">
-                      {formatCurrency(purchase.total)}
-                    </Badge>
+                    <div className="d-flex align-items-center gap-2">
+                      {typeof purchase.isVigente === "boolean" && (
+                        <Badge
+                          bg={purchase.isVigente ? "info" : "secondary"}
+                        >
+                          {purchase.isVigente ? "Vigente" : "Finalizada"}
+                        </Badge>
+                      )}
+                      <Badge bg="success">
+                        {formatCurrency(purchase.total)}
+                      </Badge>
+                    </div>
                   </Card.Header>
                   <Card.Body>
                     <div className="d-flex justify-content-between align-items-start gap-2 mb-2">
                       <div>
-                        <h2 className="h5 fw-bold mb-1">
-                          {purchase.pelicula?.titulo ?? "Película"}
-                        </h2>
+                        <h2 className="h5 fw-bold mb-1">{tituloPelicula}</h2>
                         <div className="text-muted small">
                           <i className="fa-solid fa-calendar-days me-1" />
-                          {formatDateTime(purchase.funcion?.fechaHoraInicio)}
+                          {formatDateTime(fechaInicioFuncion)}
                         </div>
                       </div>
-                      {purchase.funcion?.formatoSala && (
-                        <Badge bg="secondary">
-                          {purchase.funcion.formatoSala}
-                        </Badge>
+                      {formatoSala && (
+                        <Badge bg="secondary">{formatoSala}</Badge>
                       )}
                     </div>
 
                     <div className="text-muted small mb-3">
                       <i className="fa-solid fa-location-dot me-1" />
-                      {purchase.funcion?.nombreSucursal ?? "Sucursal"}
-                      {purchase.funcion?.ciudadSucursal
-                        ? ` (${purchase.funcion.ciudadSucursal})`
-                        : ""}
+                      {nombreSucursal}
+                      {ciudadSucursal ? ` (${ciudadSucursal})` : ""}
                       {" · "}
-                      {purchase.funcion?.nombreSala ?? "Sala"}
+                      {nombreSala}
                     </div>
 
                     <div className="mb-3">
                       <div className="small text-muted mb-1">
-                        Boletas ({purchase.seats?.length ?? 0})
+                        Boletas ({seats.length})
                       </div>
                       <div className="d-flex flex-wrap gap-1">
-                        {(purchase.seats ?? []).map((seat) => (
+                        {seats.map((seat) => (
                           <Badge key={seat} bg="primary">
                             {seat}
                           </Badge>
@@ -109,7 +174,11 @@ export default function MisComprasPage() {
                       <Table size="sm" borderless className="mb-0">
                         <tbody>
                           {purchase.combos.map((combo) => (
-                            <tr key={combo.id}>
+                            <tr
+                              key={
+                                combo.idCombo ?? combo.id ?? combo.nombre
+                              }
+                            >
                               <td className="text-muted ps-0">
                                 {combo.cantidad} × {combo.nombre}
                               </td>
@@ -127,7 +196,7 @@ export default function MisComprasPage() {
                   <Card.Footer className="bg-white small text-muted d-flex flex-wrap justify-content-between gap-2">
                     <span>
                       <i className="fa-solid fa-clock me-1" />
-                      Compra: {formatDateTime(purchase.createdAt)}
+                      Compra: {formatDateTime(fechaCompra)}
                     </span>
                     <span>Boletas: {formatCurrency(boletasTotal)}</span>
                   </Card.Footer>

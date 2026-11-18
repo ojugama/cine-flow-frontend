@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Badge,
@@ -9,15 +9,10 @@ import {
   Spinner,
 } from "react-bootstrap";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
 import SeatMap from "../components/SeatMap";
-import { COMBOS } from "../data/combos";
-import {
-  generatePurchaseCode,
-  getReservedSeats,
-  savePurchase,
-} from "../data/purchases";
-import { getPreSoldSeats, getTicketPrice } from "../data/seats";
+import { getTicketPrice } from "../data/seats";
+import { listCombos } from "../services/combosService";
+import { createCompra, getSillasOcupadas } from "../services/comprasService";
 import { listFuncionesByPelicula } from "../services/funcionesService";
 import { getPeliculaById } from "../services/peliculasService";
 import {
@@ -76,15 +71,18 @@ function groupByDate(funciones) {
 
 export default function ComprarPage() {
   const { idPelicula } = useParams();
-  const { session } = useAuth();
   const navigate = useNavigate();
 
   const [movie, setMovie] = useState(null);
   const [funciones, setFunciones] = useState([]);
+  const [combos, setCombos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [selectedFuncionId, setSelectedFuncionId] = useState(null);
+  const [reservedSeats, setReservedSeats] = useState([]);
+  const [loadingSeats, setLoadingSeats] = useState(false);
+  const [seatsError, setSeatsError] = useState("");
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [cantidades, setCantidades] = useState({});
   const [saving, setSaving] = useState(false);
@@ -97,10 +95,12 @@ export default function ComprarPage() {
       setError("");
 
       try {
-        const [movieResponse, funcionesResponse] = await Promise.all([
-          getPeliculaById(idPelicula),
-          listFuncionesByPelicula(idPelicula),
-        ]);
+        const [movieResponse, funcionesResponse, combosResponse] =
+          await Promise.all([
+            getPeliculaById(idPelicula),
+            listFuncionesByPelicula(idPelicula),
+            listCombos(),
+          ]);
 
         if (!active) return;
 
@@ -119,6 +119,11 @@ export default function ComprarPage() {
           );
 
         setFunciones(disponibles);
+        setCombos(
+          normalizeList(combosResponse.data).filter(
+            (combo) => combo.isActivo !== false,
+          ),
+        );
       } catch (requestError) {
         if (active) setError(requestError.message);
       } finally {
@@ -133,6 +138,35 @@ export default function ComprarPage() {
     };
   }, [idPelicula]);
 
+  const loadSillasOcupadas = useCallback(async (idFuncion) => {
+    if (!idFuncion) {
+      setReservedSeats([]);
+      setSeatsError("");
+      return;
+    }
+
+    setLoadingSeats(true);
+    setSeatsError("");
+
+    try {
+      const response = await getSillasOcupadas(idFuncion);
+      const ocupadas = normalizeList(response.data);
+      setReservedSeats(ocupadas);
+      setSelectedSeats((current) =>
+        current.filter((seat) => !ocupadas.includes(seat)),
+      );
+    } catch (requestError) {
+      setReservedSeats([]);
+      setSeatsError(requestError.message);
+    } finally {
+      setLoadingSeats(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSillasOcupadas(selectedFuncionId);
+  }, [selectedFuncionId, loadSillasOcupadas]);
+
   const selectedFuncion = useMemo(
     () =>
       funciones.find((funcion) => funcion.id === Number(selectedFuncionId)) ??
@@ -142,26 +176,17 @@ export default function ComprarPage() {
 
   const grupos = useMemo(() => groupByDate(funciones), [funciones]);
 
-  const reservedSeats = useMemo(() => {
-    if (!selectedFuncion) return [];
-
-    return [
-      ...new Set([
-        ...getPreSoldSeats(selectedFuncion),
-        ...getReservedSeats(selectedFuncion.id),
-      ]),
-    ];
-  }, [selectedFuncion]);
-
   const ticketPrice = selectedFuncion ? getTicketPrice(selectedFuncion) : 0;
 
   const combosSeleccionados = useMemo(
     () =>
-      COMBOS.map((combo) => ({
-        ...combo,
-        cantidad: cantidades[combo.id] ?? 0,
-      })).filter((combo) => combo.cantidad > 0),
-    [cantidades],
+      combos
+        .map((combo) => ({
+          ...combo,
+          cantidad: cantidades[combo.id] ?? 0,
+        }))
+        .filter((combo) => combo.cantidad > 0),
+    [combos, cantidades],
   );
 
   const boletasTotal = selectedSeats.length * ticketPrice;
@@ -244,44 +269,27 @@ export default function ComprarPage() {
     setSaving(true);
 
     try {
-      const purchase = {
-        id: generatePurchaseCode(),
-        createdAt: new Date().toISOString(),
-        email: session?.email ?? "",
-        pelicula: {
-          id: movie?.id ?? Number(idPelicula),
-          titulo: movie?.titulo ?? "Película",
-        },
-        funcion: {
-          id: selectedFuncion.id,
-          fechaHoraInicio: selectedFuncion.fechaHoraInicio,
-          fechaHoraFin: selectedFuncion.fechaHoraFin,
-          nombreSala: selectedFuncion.nombreSala,
-          formatoSala: selectedFuncion.formatoSala,
-          nombreSucursal: selectedFuncion.nombreSucursal,
-          ciudadSucursal: selectedFuncion.ciudadSucursal,
-        },
-        seats: selectedSeats,
-        ticketPrice,
+      const payload = {
+        idFuncion: selectedFuncion.id,
+        sillas: selectedSeats,
         combos: combosSeleccionados.map((combo) => ({
-          id: combo.id,
-          nombre: combo.nombre,
-          precio: combo.precio,
+          idCombo: combo.id,
           cantidad: combo.cantidad,
         })),
-        total,
       };
 
-      if (!savePurchase(purchase)) {
-        throw new Error(
-          "No se pudo guardar la compra en este navegador. Intenta de nuevo.",
-        );
-      }
+      const response = await createCompra(payload);
+      const compra = response.data;
 
-      notifySuccess(`Compra registrada. Código ${purchase.id}`);
+      notifySuccess(
+        compra?.codigo
+          ? `Compra registrada. Código ${compra.codigo}`
+          : (response.message || "Compra registrada correctamente."),
+      );
       navigate("/mis-compras");
     } catch (requestError) {
       notifyError(requestError.message);
+      await loadSillasOcupadas(selectedFuncion.id);
     } finally {
       setSaving(false);
     }
@@ -396,32 +404,52 @@ export default function ComprarPage() {
                       </span>
                     </div>
 
-                    <SeatMap
-                      funcion={selectedFuncion}
-                      selectedSeats={selectedSeats}
-                      reservedSeats={reservedSeats}
-                      onToggle={toggleSeat}
-                    />
+                    {seatsError && (
+                      <Alert variant="danger" className="mb-3">
+                        {seatsError}
+                      </Alert>
+                    )}
 
-                    <div className="mt-3">
-                      {selectedSeats.length === 0 ? (
-                        <span className="text-muted small">
-                          Aún no has seleccionado sillas. Máximo{" "}
-                          {MAX_TICKETS} por compra.
-                        </span>
-                      ) : (
-                        <div className="d-flex flex-wrap align-items-center gap-2">
-                          <span className="small text-muted">
-                            Sillas seleccionadas:
-                          </span>
-                          {selectedSeats.map((seat) => (
-                            <Badge key={seat} bg="primary">
-                              {seat}
-                            </Badge>
-                          ))}
+                    {loadingSeats ? (
+                      <div className="text-center text-muted py-4">
+                        <Spinner
+                          animation="border"
+                          size="sm"
+                          role="status"
+                          className="me-2"
+                        />
+                        Consultando disponibilidad de sillas...
+                      </div>
+                    ) : (
+                      <>
+                        <SeatMap
+                          funcion={selectedFuncion}
+                          selectedSeats={selectedSeats}
+                          reservedSeats={reservedSeats}
+                          onToggle={toggleSeat}
+                        />
+
+                        <div className="mt-3">
+                          {selectedSeats.length === 0 ? (
+                            <span className="text-muted small">
+                              Aún no has seleccionado sillas. Máximo{" "}
+                              {MAX_TICKETS} por compra.
+                            </span>
+                          ) : (
+                            <div className="d-flex flex-wrap align-items-center gap-2">
+                              <span className="small text-muted">
+                                Sillas seleccionadas:
+                              </span>
+                              {selectedSeats.map((seat) => (
+                                <Badge key={seat} bg="primary">
+                                  {seat}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
+                      </>
+                    )}
                   </>
                 )}
               </Card.Body>
@@ -434,58 +462,71 @@ export default function ComprarPage() {
                   Agrega combos de comida
                 </h2>
 
-                <Row className="g-3">
-                  {COMBOS.map((combo) => {
-                    const cantidad = cantidades[combo.id] ?? 0;
+                {combos.length === 0 ? (
+                  <p className="text-muted mb-0">
+                    No hay combos disponibles en este momento.
+                  </p>
+                ) : (
+                  <Row className="g-3">
+                    {combos.map((combo) => {
+                      const cantidad = cantidades[combo.id] ?? 0;
 
-                    return (
-                      <Col md={6} key={combo.id}>
-                        <div className="cf-combo h-100">
-                          <div className="cf-combo-icon">
-                            <i className={`fa-solid ${combo.icono}`} />
-                          </div>
-                          <div className="flex-grow-1">
-                            <div className="d-flex justify-content-between align-items-start gap-2">
-                              <div>
-                                <div className="fw-semibold">
-                                  {combo.nombre}
+                      return (
+                        <Col md={6} key={combo.id}>
+                          <div className="cf-combo h-100">
+                            <div className="cf-combo-icon">
+                              <i
+                                className={`fa-solid ${
+                                  combo.icono || "fa-utensils"
+                                }`}
+                              />
+                            </div>
+                            <div className="flex-grow-1">
+                              <div className="d-flex justify-content-between align-items-start gap-2">
+                                <div>
+                                  <div className="fw-semibold">
+                                    {combo.nombre}
+                                  </div>
+                                  <div className="text-muted small">
+                                    {combo.descripcion}
+                                  </div>
                                 </div>
-                                <div className="text-muted small">
-                                  {combo.descripcion}
-                                </div>
+                                <span className="fw-bold text-nowrap">
+                                  {formatCurrency(combo.precio)}
+                                </span>
                               </div>
-                              <span className="fw-bold text-nowrap">
-                                {formatCurrency(combo.precio)}
-                              </span>
-                            </div>
-                            <div className="d-flex align-items-center gap-2 mt-2">
-                              <Button
-                                size="sm"
-                                variant="outline-secondary"
-                                disabled={cantidad === 0}
-                                onClick={() => changeCombo(combo.id, -1)}
-                                aria-label={`Quitar ${combo.nombre}`}
-                              >
-                                <i className="fa-solid fa-minus" />
-                              </Button>
-                              <span className="fw-bold" style={{ width: 24 }}>
-                                {cantidad}
-                              </span>
-                              <Button
-                                size="sm"
-                                variant="outline-primary"
-                                onClick={() => changeCombo(combo.id, 1)}
-                                aria-label={`Agregar ${combo.nombre}`}
-                              >
-                                <i className="fa-solid fa-plus" />
-                              </Button>
+                              <div className="d-flex align-items-center gap-2 mt-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline-secondary"
+                                  disabled={cantidad === 0}
+                                  onClick={() => changeCombo(combo.id, -1)}
+                                  aria-label={`Quitar ${combo.nombre}`}
+                                >
+                                  <i className="fa-solid fa-minus" />
+                                </Button>
+                                <span
+                                  className="fw-bold"
+                                  style={{ width: 24 }}
+                                >
+                                  {cantidad}
+                                </span>
+                                <Button
+                                  size="sm"
+                                  variant="outline-primary"
+                                  onClick={() => changeCombo(combo.id, 1)}
+                                  aria-label={`Agregar ${combo.nombre}`}
+                                >
+                                  <i className="fa-solid fa-plus" />
+                                </Button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </Col>
-                    );
-                  })}
-                </Row>
+                        </Col>
+                      );
+                    })}
+                  </Row>
+                )}
               </Card.Body>
             </Card>
           </Col>
@@ -577,7 +618,7 @@ export default function ComprarPage() {
                 <Button
                   className="w-100"
                   size="lg"
-                  disabled={saving || selectedSeats.length === 0}
+                  disabled={saving || loadingSeats || selectedSeats.length === 0}
                   onClick={handleCheckout}
                 >
                   {saving ? (

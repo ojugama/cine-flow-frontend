@@ -58,6 +58,7 @@ export function AuthProvider({ children }) {
       session,
       isAuthenticated: Boolean(session),
       isAdmin: session?.rol === "ADMIN",
+      isClient: session?.rol === "CLIENTE",
       login,
       logout,
       refreshSession,

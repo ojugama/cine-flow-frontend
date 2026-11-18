@@ -24,28 +24,3 @@ export function getTicketPrice(funcion) {
   const formato = (funcion?.formatoSala ?? "").toUpperCase();
   return PRECIOS_POR_FORMATO[formato] ?? 16000;
 }
-
-function hashString(value) {
-  let hash = 0;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) % 1000003;
-  }
-  return hash;
-}
-
-export function getPreSoldSeats(funcion) {
-  const { rows, rowLabels, cols } = getRoomLayout(funcion);
-  const seats = new Set();
-  const funcionKey = funcion?.id ?? "0";
-
-  for (let row = 0; row < rows; row += 1) {
-    for (let col = 1; col <= cols; col += 1) {
-      const label = `${rowLabels[row]}${col}`;
-      if (hashString(`${funcionKey}:${label}`) % 8 === 0) {
-        seats.add(label);
-      }
-    }
-  }
-
-  return [...seats];
-}

@@ -5,7 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 import { getMyProfile } from "../services/usuariosService";
 
 export default function DashboardPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isClient } = useAuth();
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState("");
 
@@ -26,26 +26,31 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const cards = [
-    {
-      to: "/cartelera",
-      icon: "fa-film",
-      title: "Cartelera",
-      text: "Elige una película y su función para comprar tus boletas.",
-    },
-    {
-      to: "/mis-compras",
-      icon: "fa-ticket",
-      title: "Mis compras",
-      text: "Consulta tus boletas, combos y códigos de compra.",
-    },
-    {
-      to: "/perfil",
-      icon: "fa-user",
-      title: "Mi perfil",
-      text: "Edita tus datos personales o cambia tu contraseña.",
-    },
-  ];
+  const cards = [];
+
+  if (isClient) {
+    cards.push(
+      {
+        to: "/cartelera",
+        icon: "fa-film",
+        title: "Cartelera",
+        text: "Elige una película y su función para comprar tus boletas.",
+      },
+      {
+        to: "/mis-compras",
+        icon: "fa-ticket",
+        title: "Mis compras",
+        text: "Consulta tus boletas, combos y códigos de compra.",
+      },
+    );
+  }
+
+  cards.push({
+    to: "/perfil",
+    icon: "fa-user",
+    title: "Mi perfil",
+    text: "Edita tus datos personales o cambia tu contraseña.",
+  });
 
   if (isAdmin) {
     cards.push(
